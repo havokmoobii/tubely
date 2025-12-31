@@ -7,6 +7,9 @@ import (
 	"strings"
 	"crypto/rand"
 	"encoding/base64"
+	"os/exec"
+	"bytes"
+	"encoding/json"
 )
 
 func (cfg apiConfig) ensureAssetsDir() error {
@@ -43,4 +46,34 @@ func mediaTypeToExt(mediaType string) string {
 		return ".bin"
 	}
 	return "." + parts[1]
+}
+
+func getVideoAspectRatio(filePath string) (string, error) {
+	cmd := exec.Command("ffProbe", "-v", "error", "-print_format", "json", "-show_streams", filePath)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Can't get video aspect ratio")
+		return "", err
+	}
+
+	type ffProbeResponse struct {
+		Streams []struct {
+			Width              int    `json:"width,omitempty"`
+			Height             int    `json:"height,omitempty"`
+		} `json:"streams"`
+	}
+
+	ffProbeOut := ffProbeResponse{}
+
+	err = json.Unmarshal(out.Bytes(), &ffProbeOut)
+	if err != nil {
+		fmt.Println("Can't umarshall json for ffprobe")
+		return "", err
+	}
+
+	fmt.Println(ffProbeOut)
+
+	return "", nil
 }

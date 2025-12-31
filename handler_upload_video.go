@@ -105,5 +105,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	_, err = getVideoAspectRatio(tempFile.Name())
+
 	respondWithJSON(w, http.StatusOK, video)
 }
