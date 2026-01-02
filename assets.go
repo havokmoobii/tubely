@@ -49,7 +49,7 @@ func mediaTypeToExt(mediaType string) string {
 }
 
 func getVideoAspectRatio(filePath string) (string, error) {
-	cmd := exec.Command("ffProbe", "-v", "error", "-print_format", "json", "-show_streams", filePath)
+	cmd := exec.Command("ffprobe", "-v", "error", "-print_format", "json", "-show_streams", filePath)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -73,7 +73,32 @@ func getVideoAspectRatio(filePath string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(ffProbeOut)
+	if ffProbeOut.Streams[0].Width == ffProbeOut.Streams[0].Height {
+		return "other", nil
+	}
+	if ffProbeOut.Streams[0].Width > ffProbeOut.Streams[0].Height {
+		return "16:9", nil
+	}
+	return "9:16", nil
+}
 
-	return "", nil
+func getVideoAssetPath(assetPath string, aspectRatio string) string {
+	if aspectRatio == "16:9" {
+		return fmt.Sprintf("landscape/%v", assetPath)
+	}
+	if aspectRatio == "9:16" {
+		return fmt.Sprintf("portrait/%v", assetPath)
+	}
+	return fmt.Sprintf("other/%v", assetPath)
+}
+
+func processVideoForFastStart(filePath string) (string, error) {
+	outPath := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", outPath)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Can't preprocess video")
+		return "", err
+	}
+	return outPath, nil
 }
